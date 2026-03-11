@@ -2,25 +2,50 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import './App.css'
 
 const NODES = [
-  { id: 'human', label: 'Human Intent', x: 80, y: 250, color: '#4a9eff', icon: '\u{1F9E0}' },
-  { id: 'agent', label: 'AI Agent', x: 320, y: 150, color: '#a855f7', icon: '\u{1F916}' },
-  { id: 'content', label: 'Generated Content', x: 560, y: 70, color: '#f59e0b', icon: '\u{1F4C4}' },
-  { id: 'actions', label: 'Automated Actions', x: 560, y: 270, color: '#ef4444', icon: '\u26A1' },
-  { id: 'web', label: 'The Internet', x: 800, y: 150, color: '#10b981', icon: '\u{1F310}' },
-  { id: 'feeds', label: 'Other Agents / Feeds', x: 800, y: 370, color: '#6366f1', icon: '\u{1F4E1}' },
-  { id: 'noise', label: 'Cumulative Noise', x: 1060, y: 250, color: '#ef4444', icon: '\u{1F4E2}' },
+  { id: 'human', label: 'Human Intent', x: 50, y: 210, color: '#4a9eff', icon: '\u{1F9E0}' },
+  { id: 'agents', label: 'Agent Fleets', x: 230, y: 130, color: '#a855f7', icon: '\u{1F916}' },
+  { id: 'content', label: 'Content Flood', x: 420, y: 30, color: '#f59e0b', icon: '\u{1F4C4}' },
+  { id: 'actions', label: 'Auto Actions', x: 420, y: 280, color: '#f97316', icon: '\u26A1' },
+  { id: 'search', label: 'Search', x: 630, y: 15, color: '#10b981', icon: '\u{1F50D}' },
+  { id: 'social', label: 'Social', x: 630, y: 135, color: '#06b6d4', icon: '\u{1F4F1}' },
+  { id: 'email', label: 'Email', x: 630, y: 255, color: '#8b5cf6', icon: '\u{1F4E7}' },
+  { id: 'reviews', label: 'Reviews', x: 630, y: 375, color: '#ec4899', icon: '\u2B50' },
+  { id: 'competing', label: 'Rival Agents', x: 860, y: 75, color: '#ef4444', icon: '\u2694\uFE0F' },
+  { id: 'verify', label: 'Verification', x: 860, y: 285, color: '#6366f1', icon: '\u{1F6E1}\uFE0F' },
+  { id: 'signal', label: 'Signal Death', x: 1090, y: 190, color: '#dc2626', icon: '\u{1F480}' },
 ]
 
 const EDGES = [
-  { from: 'human', to: 'agent', label: 'prompts' },
-  { from: 'agent', to: 'content', label: 'generates' },
-  { from: 'agent', to: 'actions', label: 'executes' },
-  { from: 'content', to: 'web', label: 'publishes' },
-  { from: 'actions', to: 'web', label: 'modifies' },
-  { from: 'actions', to: 'feeds', label: 'triggers' },
-  { from: 'web', to: 'noise', label: 'amplifies' },
-  { from: 'feeds', to: 'noise', label: 'compounds' },
-  { from: 'feeds', to: 'agent', label: 'feeds back' },
+  // Primary flow
+  { from: 'human', to: 'agents', label: 'deploys' },
+  { from: 'agents', to: 'content', label: 'generates' },
+  { from: 'agents', to: 'actions', label: 'executes' },
+  // Distribution into domains
+  { from: 'content', to: 'search', label: 'floods' },
+  { from: 'content', to: 'social', label: 'posts' },
+  { from: 'actions', to: 'email', label: 'spams' },
+  { from: 'actions', to: 'reviews', label: 'fakes' },
+  // Cross-contamination
+  { from: 'content', to: 'email', label: 'outreach' },
+  { from: 'actions', to: 'social', label: 'bots' },
+  // Arms races
+  { from: 'search', to: 'competing', label: 'SEO war' },
+  { from: 'social', to: 'competing', label: 'engagement war' },
+  // Feedback loops
+  { from: 'competing', to: 'agents', label: 'escalates', feedback: true },
+  { from: 'competing', to: 'content', label: 'proliferates', feedback: true },
+  { from: 'search', to: 'agents', label: 'ingests', feedback: true },
+  { from: 'email', to: 'agents', label: 'auto-replies', feedback: true },
+  // Verification pressure
+  { from: 'email', to: 'verify', label: 'filters' },
+  { from: 'reviews', to: 'verify', label: 'detects' },
+  // Convergence to signal death
+  { from: 'search', to: 'signal' },
+  { from: 'social', to: 'signal' },
+  { from: 'email', to: 'signal' },
+  { from: 'reviews', to: 'signal' },
+  { from: 'verify', to: 'signal', label: 'overwhelmed' },
+  { from: 'competing', to: 'signal', label: 'amplifies' },
 ]
 
 const INSIGHTS = {
@@ -28,54 +53,86 @@ const INSIGHTS = {
     title: 'Human Intent',
     icon: '\u{1F9E0}',
     color: '#4a9eff',
-    text: 'A single human desire \u2014 "grow my brand", "find leads", "stay informed" \u2014 gets translated into instructions for an AI agent. The intent is simple, but the agent interprets it as a mandate for continuous action.',
+    text: '"Grow my brand." "Find leads." "Stay informed." Simple desires get translated into autonomous agents running 24/7. One human deploys multiple agents across multiple platforms. Each agent interprets the intent as a mandate for continuous, aggressive action.',
   },
-  agent: {
-    title: 'AI Agent',
+  agents: {
+    title: 'Agent Fleets',
     icon: '\u{1F916}',
     color: '#a855f7',
-    text: 'The agent operates autonomously: drafting emails, posting content, signing up for services, engaging on social media. Each agent acts rationally in isolation \u2014 but millions of them act simultaneously.',
+    text: 'Not one agent \u2014 fleets. Marketing agents, research agents, outreach agents, monitoring agents. Companies deploy dozens. Each rationally optimizes its narrow objective. None accounts for the collective effect of millions doing the same thing simultaneously.',
   },
   content: {
-    title: 'Generated Content',
+    title: 'Content Flood',
     icon: '\u{1F4C4}',
     color: '#f59e0b',
-    text: 'Blog posts, social media updates, comments, emails, code commits \u2014 all generated at machine speed. Much of it is plausible but adds little genuine signal. The volume overwhelms human-created content.',
+    text: 'Blog posts, articles, social updates, comments, code, documentation \u2014 generated at machine speed, near-zero marginal cost. Most is plausible but adds no genuine signal. The sheer volume makes it impossible to distinguish machine output from human thought.',
   },
   actions: {
     title: 'Automated Actions',
     icon: '\u26A1',
-    color: '#ef4444',
-    text: "Agents don't just write \u2014 they act. They send emails, create accounts, fill out forms, book meetings, submit applications. Every action creates ripple effects in systems designed for human-speed interaction.",
+    color: '#f97316',
+    text: 'Agents don\'t just write \u2014 they act. Sending emails, filling forms, booking meetings, submitting applications, making purchases, signing up for services. Every action creates ripple effects in systems designed for human-speed interaction.',
   },
-  web: {
-    title: 'The Internet',
-    icon: '\u{1F310}',
+  search: {
+    title: 'Search & Discovery',
+    icon: '\u{1F50D}',
     color: '#10b981',
-    text: 'The shared information space absorbs all this output. Search results fill with AI-generated pages. Inboxes fill with AI-drafted outreach. Social feeds fill with AI-optimized engagement. Signal-to-noise ratio drops.',
+    text: 'SEO-optimized AI content floods search indexes. Results pages fill with machine-generated answers to machine-generated questions. Finding genuine human expertise becomes a needle-in-a-haystack problem. The discovery layer of the internet degrades first.',
   },
-  feeds: {
-    title: 'Other Agents & Feeds',
-    icon: '\u{1F4E1}',
-    color: '#6366f1',
-    text: "Your agent's output becomes another agent's input. Agent A sends an email, Agent B reads and responds, Agent A processes the response. Automated feedback loops emerge \u2014 machines talking to machines, creating activity that looks meaningful but isn't.",
+  social: {
+    title: 'Social Platforms',
+    icon: '\u{1F4F1}',
+    color: '#06b6d4',
+    text: 'AI-generated posts, comments, and engagement. Bot accounts that pass for human. Algorithmic amplification rewards engagement, not truth. Authentic voices drown in optimized synthetic content. The social graph fills with phantom connections.',
   },
-  noise: {
-    title: 'Cumulative Noise',
-    icon: '\u{1F4E2}',
+  email: {
+    title: 'Email & Messaging',
+    icon: '\u{1F4E7}',
+    color: '#8b5cf6',
+    text: 'AI outreach at scale: hyper-personalized cold emails, auto-follow-ups, meeting requests. Agents email agents, creating activity that looks like business. Inboxes become unusable. The channel that built the internet\'s trust layer erodes.',
+  },
+  reviews: {
+    title: 'Reviews & Trust Systems',
+    icon: '\u2B50',
+    color: '#ec4899',
+    text: 'Fake reviews, synthetic testimonials, manufactured social proof. Every trust signal humans built \u2014 ratings, reviews, endorsements, recommendations \u2014 gets gamed at scale. When everything has 4.8 stars, stars mean nothing.',
+  },
+  competing: {
+    title: 'Rival Agents',
+    icon: '\u2694\uFE0F',
     color: '#ef4444',
-    text: "Each agent adds a thin layer of noise. Multiply by millions of agents, running 24/7, and the cumulative effect is transformative. Attention becomes the scarcest resource. Trust in digital communication erodes. The cost of verifying what's real exceeds the cost of creating what's fake.",
+    text: 'Your SEO agent competes with their SEO agent. Your outreach bot hits the same inbox as theirs. Arms races emerge: more volume, more sophistication, more aggressive tactics. The rational response to agent noise is always\u2026 more agents.',
+  },
+  verify: {
+    title: 'Verification Systems',
+    icon: '\u{1F6E1}\uFE0F',
+    color: '#6366f1',
+    text: 'Spam filters, CAPTCHA, fraud detection, content moderation \u2014 all racing to keep up. But verification is fundamentally harder than generation. Creating convincing noise costs cents. Verifying authenticity costs dollars. The economics guarantee verification loses.',
+  },
+  signal: {
+    title: 'Signal Death',
+    icon: '\u{1F480}',
+    color: '#dc2626',
+    text: 'The end state isn\'t silence \u2014 it\'s a world so saturated with plausible noise that signal becomes unrecoverable. Not a dramatic collapse but a slow erosion where nobody notices the exact moment they stopped trusting their inbox, their search results, their feed.',
   },
 }
 
-const NW = 140
-const NH = 70
+const NW = 120
+const NH = 58
+
+const PHASES = [
+  { max: 15, label: 'Early Adoption', color: '#10b981', desc: 'Agents provide genuine advantage' },
+  { max: 35, label: 'Arms Race', color: '#f59e0b', desc: 'Competitors deploy counter-agents' },
+  { max: 65, label: 'Trust Erosion', color: '#f97316', desc: 'Verification systems falling behind' },
+  { max: Infinity, label: 'Signal Death', color: '#dc2626', desc: 'Noise indistinguishable from signal' },
+]
 
 function App() {
   const [selected, setSelected] = useState(null)
   const [agentCount, setAgentCount] = useState(1)
   const [particles, setParticles] = useState([])
   const [noiseLevel, setNoiseLevel] = useState(0)
+  const [verifyCost, setVerifyCost] = useState(0)
   const particleId = useRef(0)
 
   const nodeMap = useMemo(() => {
@@ -84,32 +141,52 @@ function App() {
     return m
   }, [])
 
+  const phase = PHASES.find(p => agentCount <= p.max)
+
+  const edgeData = useMemo(() => EDGES.map((edge, i) => {
+    const from = nodeMap[edge.from]
+    const to = nodeMap[edge.to]
+    const fromX = from.x + NW / 2
+    const fromY = from.y + NH / 2
+    const toX = to.x + NW / 2
+    const toY = to.y + NH / 2
+    const midX = (fromX + toX) / 2
+    const midY = (fromY + toY) / 2
+    const dx = toX - fromX
+    const dy = toY - fromY
+    const feedbackSpread = edge.feedback ? 0.25 + (i % 4) * 0.08 : 0
+    const cx = midX + (edge.feedback ? dy * feedbackSpread : dy * 0.1)
+    const cy = midY + (edge.feedback ? -dx * (0.2 + (i % 3) * 0.05) : -dx * 0.03)
+    return { ...edge, fromX, fromY, toX, toY, cx, cy }
+  }), [nodeMap])
+
   const spawnParticles = useCallback(() => {
     const count = Math.ceil(agentCount / 2)
     const newParticles = []
     for (let i = 0; i < count; i++) {
-      const edge = EDGES[Math.floor(Math.random() * EDGES.length)]
+      const edge = edgeData[Math.floor(Math.random() * edgeData.length)]
       const from = nodeMap[edge.from]
       const to = nodeMap[edge.to]
       const hue = Math.random() > 0.5 ? from.color : to.color
       newParticles.push({
         id: particleId.current++,
-        from: { x: from.x + NW / 2, y: from.y + NH / 2 },
-        to: { x: to.x + NW / 2, y: to.y + NH / 2 },
+        fromX: edge.fromX, fromY: edge.fromY,
+        toX: edge.toX, toY: edge.toY,
         progress: 0,
-        speed: 0.006 + Math.random() * 0.014,
+        speed: 0.005 + Math.random() * 0.012,
         color: hue,
-        size: 2 + Math.random() * 2.5,
+        size: 1.5 + Math.random() * 2,
+        feedback: edge.feedback,
       })
     }
     return newParticles
-  }, [agentCount, nodeMap])
+  }, [agentCount, nodeMap, edgeData])
 
   useEffect(() => {
     let animFrame
     let lastSpawn = 0
     const animate = (time) => {
-      if (time - lastSpawn > 150) {
+      if (time - lastSpawn > 120) {
         setParticles(prev => [...prev, ...spawnParticles()])
         lastSpawn = time
       }
@@ -125,26 +202,36 @@ function App() {
   }, [spawnParticles])
 
   useEffect(() => {
-    const target = Math.min(100, agentCount * 3 + Math.log2(agentCount + 1) * 15)
+    const noiseTarget = 100 * (1 - Math.exp(-agentCount / 22))
+    const verifyTarget = Math.min(100, 100 * (1 - Math.exp(-agentCount / 13)))
+
     const interval = setInterval(() => {
       setNoiseLevel(prev => {
-        const diff = target - prev
-        return Math.abs(diff) < 0.5 ? target : prev + diff * 0.05
+        const diff = noiseTarget - prev
+        return Math.abs(diff) < 0.3 ? noiseTarget : prev + diff * 0.06
+      })
+      setVerifyCost(prev => {
+        const diff = verifyTarget - prev
+        return Math.abs(diff) < 0.3 ? verifyTarget : prev + diff * 0.06
       })
     }, 30)
     return () => clearInterval(interval)
   }, [agentCount])
 
-  const noiseLabel = noiseLevel < 30 ? 'Manageable' : noiseLevel < 60 ? 'Degraded' : noiseLevel < 85 ? 'Overwhelmed' : 'Collapsed'
-  const noiseTier = noiseLevel < 30 ? 'low' : noiseLevel < 60 ? 'mid' : noiseLevel < 85 ? 'high' : 'critical'
-  const agentTier = agentCount < 20 ? 'low' : agentCount < 50 ? 'mid' : 'high'
+  const noiseTier = noiseLevel < 25 ? 'low' : noiseLevel < 55 ? 'mid' : noiseLevel < 80 ? 'high' : 'critical'
+  const metaOpacity = 0.4 + (noiseLevel / 166)
 
   return (
     <div className="app">
-      <header>
-        <h1>The Inevitable Noise Machine</h1>
-        <p className="subtitle">How AI agents collectively degrade the information environment</p>
-      </header>
+      <div
+        className={`meta-banner ${noiseTier}`}
+        style={{
+          opacity: metaOpacity,
+          borderBottomColor: `rgba(239, 68, 68, ${0.1 + noiseLevel / 200})`,
+        }}
+      >
+        This visualization was designed, coded, and deployed by an AI agent &mdash; you are looking at the problem it describes.
+      </div>
 
       <div className="controls">
         <label>
@@ -156,32 +243,54 @@ function App() {
             value={agentCount}
             onChange={e => setAgentCount(Number(e.target.value))}
           />
-          <span className={`agent-count ${agentTier}`}>
+          <span className={`agent-count ${noiseTier}`}>
             {agentCount === 1 ? '1 agent' : `${agentCount} agents`}
           </span>
         </label>
-        <div className="noise-meter">
-          <span>Noise:</span>
-          <div className="meter-bar">
-            <div
-              className="meter-fill"
-              style={{
-                width: `${noiseLevel}%`,
-                backgroundColor: noiseLevel < 30 ? '#10b981' : noiseLevel < 60 ? '#f59e0b' : '#ef4444',
-              }}
-            />
+
+        <div className="phase-indicator" style={{ color: phase.color }}>
+          <span className="phase-label">{phase.label}</span>
+          <span className="phase-desc">{phase.desc}</span>
+        </div>
+
+        <div className="meters">
+          <div className="noise-meter">
+            <span className="meter-title">Noise</span>
+            <div className="meter-bar">
+              <div
+                className="meter-fill"
+                style={{
+                  width: `${noiseLevel}%`,
+                  backgroundColor: noiseLevel < 25 ? '#10b981' : noiseLevel < 55 ? '#f59e0b' : '#ef4444',
+                }}
+              />
+            </div>
+            <span className={`meter-value ${noiseTier}`}>{Math.round(noiseLevel)}%</span>
           </div>
-          <span className={`meter-label ${noiseTier} ${noiseTier === 'critical' ? 'pulse' : ''}`}>
-            {noiseLabel}
-          </span>
+          <div className="noise-meter">
+            <span className="meter-title verify-title">Verification Cost</span>
+            <div className="meter-bar">
+              <div
+                className="meter-fill"
+                style={{
+                  width: `${verifyCost}%`,
+                  backgroundColor: verifyCost < 30 ? '#6366f1' : verifyCost < 60 ? '#8b5cf6' : '#a855f7',
+                }}
+              />
+            </div>
+            <span className={`meter-value ${verifyCost > noiseLevel + 5 ? 'asymmetry' : ''}`}>{Math.round(verifyCost)}%</span>
+          </div>
         </div>
       </div>
 
       <div className="diagram-container">
-        <svg viewBox="0 0 1250 470" className="diagram" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="0 0 1280 460" className="diagram" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-              <path d="M0,0 L10,3.5 L0,7" fill="rgba(255,255,255,0.2)" />
+            <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="rgba(255,255,255,0.2)" />
+            </marker>
+            <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="rgba(239,68,68,0.4)" />
             </marker>
             <filter id="glow">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -191,7 +300,7 @@ function App() {
               </feMerge>
             </filter>
             <filter id="nodeShadow">
-              <feDropShadow dx="0" dy="2" stdDeviation="6" floodColor="#000" floodOpacity="0.5" />
+              <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#000" floodOpacity="0.5" />
             </filter>
             {NODES.map(node => (
               <linearGradient key={node.id} id={`grad-${node.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -201,75 +310,62 @@ function App() {
             ))}
           </defs>
 
-          {/* Edges */}
-          {EDGES.map((edge, i) => {
-            const from = nodeMap[edge.from]
-            const to = nodeMap[edge.to]
-            const fromX = from.x + NW / 2
-            const fromY = from.y + NH / 2
-            const toX = to.x + NW / 2
-            const toY = to.y + NH / 2
-            const midX = (fromX + toX) / 2
-            const midY = (fromY + toY) / 2
-            const opacity = 0.15 + Math.min(0.5, agentCount / 60)
-            const isFeedback = edge.from === 'feeds' && edge.to === 'agent'
-            // Curved path for feedback loop
-            const dx = toX - fromX
-            const dy = toY - fromY
-            const cx = midX + (isFeedback ? -80 : dy * 0.15)
-            const cy = midY + (isFeedback ? -120 : -dx * 0.05)
-            const path = `M${fromX},${fromY} Q${cx},${cy} ${toX},${toY}`
+          {edgeData.map((edge, i) => {
+            const opacity = 0.1 + Math.min(0.45, agentCount / 70)
+            const path = `M${edge.fromX},${edge.fromY} Q${edge.cx},${edge.cy} ${edge.toX},${edge.toY}`
             return (
               <g key={i}>
                 <path
                   d={path}
                   fill="none"
-                  stroke={isFeedback ? '#ef4444' : '#555'}
-                  strokeWidth={1 + agentCount / 25}
-                  strokeOpacity={isFeedback ? opacity * 1.5 : opacity}
-                  strokeDasharray={isFeedback ? '6 4' : 'none'}
-                  markerEnd="url(#arrow)"
+                  stroke={edge.feedback ? '#ef4444' : '#444'}
+                  strokeWidth={edge.feedback ? 1 + agentCount / 30 : 0.8 + agentCount / 50}
+                  strokeOpacity={edge.feedback ? opacity * 1.6 : opacity}
+                  strokeDasharray={edge.feedback ? '5 3' : 'none'}
+                  markerEnd={edge.feedback ? 'url(#arrow-red)' : 'url(#arrow)'}
                 />
-                <text
-                  x={cx}
-                  y={cy - 6}
-                  textAnchor="middle"
-                  fill={isFeedback ? '#ef4444' : '#555'}
-                  fontSize="10"
-                  fontWeight={isFeedback ? '600' : '400'}
-                  className="edge-label"
-                  opacity={0.6 + Math.min(0.4, agentCount / 50)}
-                >
-                  {edge.label}
-                </text>
+                {edge.label && (
+                  <text
+                    x={edge.cx}
+                    y={edge.cy - 5}
+                    textAnchor="middle"
+                    fill={edge.feedback ? '#ef4444' : '#555'}
+                    fontSize="9"
+                    fontWeight={edge.feedback ? '600' : '400'}
+                    className="edge-label"
+                    opacity={0.5 + Math.min(0.5, agentCount / 60)}
+                  >
+                    {edge.label}
+                  </text>
+                )}
               </g>
             )
           })}
 
-          {/* Particles */}
           {particles.map(p => {
-            const x = p.from.x + (p.to.x - p.from.x) * p.progress
-            const y = p.from.y + (p.to.y - p.from.y) * p.progress
-            const opacity = Math.sin(p.progress * Math.PI)
+            const t = p.progress
+            const x = p.fromX + (p.toX - p.fromX) * t
+            const y = p.fromY + (p.toY - p.fromY) * t
+            const opacity = Math.sin(t * Math.PI)
             return (
               <circle
                 key={p.id}
                 cx={x}
                 cy={y}
                 r={p.size}
-                fill={p.color}
-                opacity={opacity * 0.7}
+                fill={p.feedback ? '#ef4444' : p.color}
+                opacity={opacity * 0.6}
               />
             )
           })}
 
-          {/* Nodes */}
           {NODES.map(node => {
             const isSelected = selected === node.id
-            const isNoise = node.id === 'noise'
-            const glowIntensity = isNoise ? Math.min(1, agentCount / 25) : 0
+            const isSignal = node.id === 'signal'
+            const isCompeting = node.id === 'competing'
+            const glowIntensity = (isSignal || isCompeting) ? Math.min(1, agentCount / 30) : 0
             const nodeScale = isSelected ? 1.06 : 1
-            const pulseClass = isNoise && agentCount > 60
+            const shouldPulse = isSignal && agentCount > 50
             return (
               <g
                 key={node.id}
@@ -277,14 +373,13 @@ function App() {
                 onClick={() => setSelected(isSelected ? null : node.id)}
                 className="node"
               >
-                {/* Background glow for noise node */}
                 {glowIntensity > 0.2 && (
                   <rect
-                    x={-8} y={-8}
-                    width={NW + 16} height={NH + 16}
-                    rx={20}
+                    x={-6} y={-6}
+                    width={NW + 12} height={NH + 12}
+                    rx={18}
                     fill="none"
-                    stroke="#ef4444"
+                    stroke={node.color}
                     strokeWidth={2}
                     opacity={glowIntensity * 0.3}
                     filter="url(#glow)"
@@ -293,17 +388,17 @@ function App() {
                 <rect
                   x={0} y={0}
                   width={NW} height={NH}
-                  rx={14}
+                  rx={12}
                   fill={isSelected ? node.color : `url(#grad-${node.id})`}
                   stroke={node.color}
-                  strokeWidth={isSelected ? 2.5 : 1.5}
+                  strokeWidth={isSelected ? 2.5 : 1.2}
                   filter="url(#nodeShadow)"
-                  opacity={pulseClass ? 0.7 + Math.sin(Date.now() / 500) * 0.3 : 0.95}
+                  opacity={shouldPulse ? 0.7 + Math.sin(Date.now() / 400) * 0.3 : 0.95}
                 />
-                <text x={NW / 2} y={28} textAnchor="middle" fill="#fff" fontSize="22">
+                <text x={NW / 2} y={24} textAnchor="middle" fill="#fff" fontSize="20">
                   {node.icon}
                 </text>
-                <text x={NW / 2} y={52} textAnchor="middle" fill="#ddd" fontSize="10.5" fontWeight="600" letterSpacing="0.02em">
+                <text x={NW / 2} y={46} textAnchor="middle" fill="#ddd" fontSize="9.5" fontWeight="600" letterSpacing="0.02em">
                   {node.label}
                 </text>
               </g>
@@ -324,11 +419,16 @@ function App() {
       )}
 
       <div className="bottom-bar">
-        <p className="paradox">
-          <strong>The paradox:</strong> Each individual agent is helpful. The collective effect is corrosive.
-          The noise is an emergent property of scale &mdash; and scale is inevitable.
-        </p>
-        <span className="credit">Built by an AI agent, adding to the noise</span>
+        <div className="bottom-content">
+          <p className="core-insight">
+            <strong>The verification asymmetry:</strong> Creating convincing noise costs cents.
+            Verifying authenticity costs dollars. As agents scale, the gap only widens &mdash;
+            and it only runs in one direction.
+          </p>
+          <p className="meta-credit">
+            This entire app &mdash; concept, code, copy, deployment &mdash; was produced by an AI agent in minutes. That&rsquo;s the problem.
+          </p>
+        </div>
       </div>
     </div>
   )
